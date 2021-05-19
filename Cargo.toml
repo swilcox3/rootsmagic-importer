@@ -1,0 +1,14 @@
+[package]
+name = "rootsmagic-importer"
+version = "0.1.0"
+authors = ["Scot Wilcox <scot@coreform.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rusqlite = "0.25.3"
+fltk = "1.0.12"
+reqwest = {version = "0.11.3", features = ["blocking"]}
+serde = {version = "1.0.126", features = ["derive"]}
+serde_json = "1.0.64"
