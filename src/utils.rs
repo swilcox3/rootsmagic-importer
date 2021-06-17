@@ -9,5 +9,9 @@ pub enum ImportError {
     #[error("There are no matches to display")]
     NoMatchesError,
     #[error("{0}")]
-    URLEncodeError(#[from] serde_urlencoded::ser::Error)
+    URLEncodeError(#[from] serde_urlencoded::ser::Error),
+    #[error("{0}")]
+    GuiError(#[from] fltk::prelude::FltkError),
+    #[error("{0}")]
+    JsonError(#[from] serde_json::Error)
 }

@@ -1,8 +1,8 @@
 mod database;
-mod utils;
 mod gui;
 mod importers;
+mod utils;
 
 fn main() {
-    println!("Hello, world!");
+    gui::run().unwrap();
 }

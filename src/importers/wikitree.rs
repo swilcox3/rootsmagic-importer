@@ -1,71 +1,70 @@
-use reqwest::blocking::get;
 use crate::utils::ImportError;
-use serde::{Serialize, Deserialize, de::DeserializeOwned};
+use reqwest::blocking::get;
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 const API_URL: &str = "https://api.wikitree.com/api.php";
-const PERSON_FIELDS: [&str; 15] = ["FirstName", "MiddleName", "LastNameAtBirth", "LastNameCurrent", "Nicknames", "LastNameOther", "RealName", "Prefix", "Suffix", "Gender", "BirthDate", "DeathDate", "BirthLocation", "DeathLocation", "IsLiving"];
+const PERSON_FIELDS: &str = "Id,FirstName,MiddleName,Nicknames,LastNameAtBirth,LastNameCurrent,Nicknames,LastNameOther,RealName,Prefix,Suffix,Gender,BirthDate,DeathDate,BirthLocation,DeathLocation,IsLiving";
 
-pub struct WikiTreeSearchPersonRequest {
-    FirstName: String,
-    LastName: String,
-    BirthDate: String,
-    DeathDate: String,
-    RealName: String,
-    LastNameCurrent: String,
-    BirthLocation: String,
-    DeathLocation: String,
-    Gender: String,
-    fatherFirstName: String,
-    fatherLastName: String,
-    motherFirstName: String,
-    motherLastName: String,
+#[allow(non_snake_case)]
+#[derive(Serialize, Debug, Default)]
+pub struct WikiTreeSearchPersonParams<'a> {
+    pub FirstName: Option<String>,
+    pub LastName: Option<String>,
+    BirthDate: Option<String>,
+    DeathDate: Option<String>,
+    RealName: Option<String>,
+    LastNameCurrent: Option<String>,
+    BirthLocation: Option<String>,
+    DeathLocation: Option<String>,
+    Gender: Option<String>,
+    fatherFirstName: Option<String>,
+    fatherLastName: Option<String>,
+    motherFirstName: Option<String>,
+    motherLastName: Option<String>,
+    fields: &'a str,
 }
 
-pub struct WikiTreeSearchPersonResult {
-    Id: i64,
-    Name: String,
-    LastNameAtBirth: String,
-    LastNameCurrent: String,
-    LastNameOther: String,
-    RealName: String,
-    Prefix: String,
-    Suffix: String,
-    ShortName: String,
-    Father: i64,
-    Mother: i64,
+#[allow(non_snake_case)]
+#[derive(Deserialize, Debug)]
+pub struct WikiTreeSearchPersonFrame {
+    status: i64,
+    matches: Vec<WikiTreePerson>,
 }
 
+#[allow(non_snake_case)]
 #[derive(Serialize, Debug)]
 pub struct WikiTreeGetPersonRequest<'a> {
     pub key: i64,
-    fields: [&'a str; 15]
+    fields: &'a str,
 }
 
+#[allow(non_snake_case)]
 #[derive(Deserialize, Debug)]
 pub struct WikiTreePerson {
     Id: i64,
-    FirstName: String,
-    MiddleName: String,
-    LastNameAtBirth: String,
-    LastNameCurrent: String,
-    NickNames: String,
-    LastNameOther: String,
-    RealName: String,
-    Prefix: String,
-    Suffix: String,
-    Gender: String,
-    BirthDate: String,
-    DeathDate: String,
-    BirthLocation: String,
-    DeathLocation: String,
+    FirstName: Option<String>,
+    MiddleName: Option<String>,
+    LastNameAtBirth: Option<String>,
+    LastNameCurrent: Option<String>,
+    Nicknames: Option<String>,
+    LastNameOther: Option<String>,
+    RealName: Option<String>,
+    Prefix: Option<String>,
+    Suffix: Option<String>,
+    Gender: Option<String>,
+    BirthDate: Option<String>,
+    DeathDate: Option<String>,
+    BirthLocation: Option<String>,
+    DeathLocation: Option<String>,
     IsLiving: i64,
 }
 
+#[allow(non_snake_case)]
 #[derive(Deserialize, Debug)]
 struct WikiTreeGetPersonResult {
     user_id: i64,
     person: WikiTreePerson,
-    status: i64
+    status: i64,
 }
 
 fn construct_url<T: Serialize>(action: &str, fields: T) -> Result<String, ImportError> {
@@ -77,29 +76,53 @@ fn call_wikitree_api<T: DeserializeOwned>(url: &str) -> Result<T, ImportError> {
     let resp = get(url)?.error_for_status();
     match resp {
         Ok(body) => {
-            let info: T = body.json()?;
+            let text = body.text()?;
+            println!("{:?}", text);
+            let info: T = serde_json::from_str(&text)?;
             Ok(info)
         }
-        Err(err) => {
-            Err(ImportError::HTTPStatusError(String::from(url), err.status().unwrap_or(reqwest::StatusCode::INTERNAL_SERVER_ERROR)))
-        }
+        Err(err) => Err(ImportError::HTTPStatusError(
+            String::from(url),
+            err.status()
+                .unwrap_or(reqwest::StatusCode::INTERNAL_SERVER_ERROR),
+        )),
     }
 }
 
-pub fn search_person(person: &WikiTreeSearchPersonRequest) -> Result<Vec<WikiTreeSearchPersonResult>, ImportError> {
-
+pub fn search_person(
+    mut person: WikiTreeSearchPersonParams,
+) -> Result<Vec<WikiTreePerson>, ImportError> {
+    person.fields = PERSON_FIELDS;
+    let url = construct_url("searchPerson", person)?;
+    let mut results: Vec<WikiTreeSearchPersonFrame> = call_wikitree_api(&url)?;
+    Ok(results.remove(0).matches)
 }
 
 pub fn get_person(person_id: i64) -> Result<WikiTreePerson, ImportError> {
     let params = WikiTreeGetPersonRequest {
         key: person_id,
-        fields: PERSON_FIELDS
+        fields: PERSON_FIELDS,
     };
     let url = construct_url("getPerson", params)?;
-    let results: Vec<WikiTreeGetPersonResult> = call_wikitree_api(&url)?;
+    let mut results: Vec<WikiTreeGetPersonResult> = call_wikitree_api(&url)?;
     if results.len() > 0 {
-        Ok(results[0].person)
+        Ok(results.remove(0).person)
     } else {
         Err(ImportError::NoMatchesError)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_search_pauline() {
+		let mut search = WikiTreeSearchPersonParams::default();
+        search.FirstName = Some(String::from("Pauline"));
+        search.LastName = Some(String::from("Winkel"));
+        let mut results = search_person(search).unwrap();
+        let first = results.remove(0);
+        println!("{:?}", results);
     }
 }
