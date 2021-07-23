@@ -13,5 +13,11 @@ pub enum ImportError {
     #[error("{0}")]
     GuiError(#[from] fltk::prelude::FltkError),
     #[error("{0}")]
-    JsonError(#[from] serde_json::Error)
+    JsonError(#[from] serde_json::Error),
+}
+
+macro_rules! rc {
+    ($inner: expr) => {
+        std::rc::Rc::from(std::cell::RefCell::from($inner))
+    };
 }
