@@ -1,7 +1,7 @@
+use super::*;
 use crate::utils::ImportError;
 use reqwest::blocking::get;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use super::*;
 
 const API_URL: &str = "https://api.wikitree.com/api.php";
 const PERSON_FIELDS: &str = "Id,FirstName,MiddleName,Nicknames,LastNameAtBirth,LastNameCurrent,Nicknames,LastNameOther,RealName,Prefix,Suffix,Gender,BirthDate,DeathDate,BirthLocation,DeathLocation,IsLiving";
@@ -28,7 +28,7 @@ impl std::convert::From<Search> for WikiTreeSearchPerson {
             Gender::Female => Some(String::from("female")),
             Gender::Male => Some(String::from("male")),
             Gender::Other => Some(String::from("male")),
-            Gender::Unknown => None
+            Gender::Unknown => None,
         };
 
         WikiTreeSearchPerson {
@@ -42,7 +42,7 @@ impl std::convert::From<Search> for WikiTreeSearchPerson {
             fatherFirstName: search.father_first_name,
             fatherLastName: search.father_last_name,
             motherFirstName: search.mother_first_name,
-            motherLastName: search.mother_last_name
+            motherLastName: search.mother_last_name,
         }
     }
 }
@@ -58,7 +58,7 @@ impl WikiTreeSearchPersonRequest {
     fn new(person: WikiTreeSearchPerson) -> WikiTreeSearchPersonRequest {
         WikiTreeSearchPersonRequest {
             person,
-            fields: PERSON_FIELDS
+            fields: PERSON_FIELDS,
         }
     }
 }
@@ -140,7 +140,7 @@ impl Person for WikiTreePerson {
                     Gender::Other
                 }
             }
-            None => Gender::Unknown
+            None => Gender::Unknown,
         }
     }
     fn birth_date(&self) -> &Option<String> {
@@ -194,9 +194,7 @@ fn call_wikitree_api<T: DeserializeOwned>(url: &str) -> Result<T, ImportError> {
     }
 }
 
-fn search_person(
-    request: WikiTreeSearchPersonRequest,
-) -> Result<Vec<WikiTreePerson>, ImportError> {
+fn search_person(request: WikiTreeSearchPersonRequest) -> Result<Vec<WikiTreePerson>, ImportError> {
     let url = construct_url("searchPerson", request)?;
     let mut results: Vec<WikiTreeSearchPersonResult> = call_wikitree_api(&url)?;
     Ok(results.remove(0).matches)
@@ -225,25 +223,23 @@ impl WikiTreeImporter {
 }
 
 impl ImportSource for WikiTreeImporter {
-	fn search_person( &self, search: Search ) -> Result<Vec<Box<dyn Person>>, ImportError> {
+    fn search_person(&self, search: Search) -> Result<Vec<Box<dyn Person>>, ImportError> {
         let person = WikiTreeSearchPerson::from(search);
         let request = WikiTreeSearchPersonRequest::new(person);
-        let results = search_person( request )?;
+        let results = search_person(request)?;
         let mut boxed_results = Vec::new();
         for result_person in results {
-            boxed_results.push( Box::new(result_person) as Box< dyn Person> );
+            boxed_results.push(Box::new(result_person) as Box<dyn Person>);
         }
         Ok(boxed_results)
     }
 
-	fn get_person( &self, id: String ) -> Result<Box<dyn Person>, ImportError> {
-        let id_num = id.parse().unwrap();  //Safe because we get the id directly off the return for search
+    fn get_person(&self, id: String) -> Result<Box<dyn Person>, ImportError> {
+        let id_num = id.parse().unwrap(); //Safe because we get the id directly off the return for search
         let result = get_person(id_num)?;
         Ok(Box::new(result) as Box<dyn Person>)
     }
-
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -251,7 +247,7 @@ mod tests {
 
     #[test]
     fn test_search_pauline() {
-		let mut search = WikiTreeSearchPerson::default();
+        let mut search = WikiTreeSearchPerson::default();
         search.FirstName = Some(String::from("Pauline"));
         search.LastName = Some(String::from("Winkel"));
         let mut results = search_person(WikiTreeSearchPersonRequest::new(search)).unwrap();

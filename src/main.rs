@@ -16,6 +16,8 @@ fn val_as_opt(input: &input::Input) -> Option<String> {
     }
 }
 
+fn person_window(importer: Box<dyn ImportSource>, person_id: String) {}
+
 fn search_window(importer: Box<dyn ImportSource>) {
     let mut window = Window::new(100, 100, 400, 300, "Search Person");
     let mut search_button = button::Button::new(160, 200, 80, 40, "Search");
@@ -25,7 +27,19 @@ fn search_window(importer: Box<dyn ImportSource>) {
         let first = first_search.clone();
         let last = last_search.clone();
         move |_| {
-            let search = importers::Search::new(val_as_opt(&first.borrow()), val_as_opt(&last.borrow()), None, None, None, None, importers::Gender::Unknown, None, None, None, None);
+            let search = importers::Search::new(
+                val_as_opt(&first.borrow()),
+                val_as_opt(&last.borrow()),
+                None,
+                None,
+                None,
+                None,
+                importers::Gender::Unknown,
+                None,
+                None,
+                None,
+                None,
+            );
             let results = importer.search_person(search).unwrap();
             println!("{:?}", results);
         }
@@ -38,7 +52,7 @@ fn run() -> Result<(), ImportError> {
     let app = app::App::default().with_scheme(app::Scheme::Plastic);
     let mut window = Window::new(100, 100, 400, 300, "Rootsmagic Importer");
     let mut search_button = button::Button::new(160, 200, 80, 40, "Search Wikitree");
-    search_button.set_callback(|_|{
+    search_button.set_callback(|_| {
         let importer = importers::wikitree::WikiTreeImporter::new();
         search_window(Box::new(importer) as Box<dyn ImportSource>);
     });
